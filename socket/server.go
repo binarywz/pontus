@@ -54,16 +54,10 @@ func (server *Server) BroadCast(user *User, msg string) {
 func (server *Server) Handler(conn net.Conn) {
 	// 处理连接
 	userAddr := conn.RemoteAddr().String()
-	user := NewUser(conn)
+	user := NewUser(conn, server)
 	fmt.Println(userAddr, "online...")
 
-	// 用户上线
-	server.mapLock.Lock()
-	server.OnlineMap[user.Name] = user
-	server.mapLock.Unlock()
-
-	// 广播当前用户上线消息
-	server.BroadCast(user, "online")
+	user.Online()
 
 	// 接收客户端发送的消息
 	go func() {
@@ -71,19 +65,17 @@ func (server *Server) Handler(conn net.Conn) {
 		for {
 			n, readErr := conn.Read(buf)
 			if n == 0 {
-				server.BroadCast(user, "offline")
+				user.Online()
 				return
 			}
 			if readErr != nil {
 				fmt.Println("Conn read err:", readErr)
 				return
 			}
-
 			// 提取用户的消息
 			msg := string(buf)
-
-			// 广播消息
-			server.BroadCast(user, msg)
+			// 用户处理消息
+			user.DoMessage(msg)
 		}
 	}()
 
