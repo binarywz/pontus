@@ -1,6 +1,9 @@
 package main
 
-import "net"
+import (
+	"fmt"
+	"net"
+)
 
 type User struct {
 	Name   string
@@ -50,9 +53,25 @@ func (user *User) Offline() {
 	user.server.BroadCast(user, "offline")
 }
 
+func (user *User) SendMsg(msg string) {
+	user.conn.Write([]byte(msg))
+}
+
 // DoMessage 用户处理消息
 func (user *User) DoMessage(msg string) {
-	user.server.BroadCast(user, msg)
+	if msg == "who" {
+		fmt.Println("user DoMessage:", msg)
+		// 查询当前在线用户
+		user.server.mapLock.Lock()
+		for _, item := range user.server.OnlineMap {
+			onlineInfo := "[" + item.Addr + "]" + item.Name + ": online..."
+			user.SendMsg(onlineInfo)
+		}
+		user.server.mapLock.Unlock()
+	} else {
+		user.server.BroadCast(user, msg)
+	}
+
 }
 
 // Listen 监听channel消息
